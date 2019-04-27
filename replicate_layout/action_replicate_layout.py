@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #  action_replicate_layout.py
 #
 # Copyright (C) 2018 Mitja Nemec
@@ -18,131 +19,73 @@
 #  MA 02110-1301, USA.
 #
 #
-
+from __future__ import absolute_import, division, print_function
 import wx
 import pcbnew
-import replicatelayout
+import os
+import logging
+import sys
 
-___version___ = "1.0"
+if __name__ == '__main__':
+    import replicatelayout
+    import replicate_layout_GUI
+else:
+    from . import replicatelayout
+    from . import replicate_layout_GUI
+
+# get version information
+version_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "version.txt")
+with open(version_filename) as f:
+    VERSION = f.readline().strip()
 
 
-class ReplicateLayoutDialog(wx.Dialog):
-    def __init__(self, parent, radius, width, angle):
+class ReplicateLayoutDialog(replicate_layout_GUI.ReplicateLayoutGUI):
+    # hack for new wxFormBuilder generating code incompatible with old wxPython
+    # noinspection PyMethodOverriding
+    def SetSizeHints(self, sz1, sz2):
+        # DO NOTHING
+        pass
 
-        wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = u"Replicate layout", pos = wx.DefaultPosition, size = wx.Size( 270,387 ), style = wx.DEFAULT_DIALOG_STYLE )
-
-        bSizer1 = wx.BoxSizer( wx.VERTICAL )
-
-        bSizer9 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.rad_btn_Linear = wx.RadioButton( self, wx.ID_ANY, u"Linear", wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
-        self.rad_btn_Linear.SetValue(True)
-        bSizer9.Add( self.rad_btn_Linear, 0, wx.ALL, 5 )
-
-        self.rad_btn_Circular = wx.RadioButton( self, wx.ID_ANY, u"Circular", wx.DefaultPosition, wx.DefaultSize, wx.RB_GROUP )
-        self.rad_btn_Circular.SetValue(False)
-        bSizer9.Add( self.rad_btn_Circular, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer9, 1, wx.EXPAND, 5 )
-
-        bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.lbl_x_mag = wx.StaticText( self, wx.ID_ANY, u"x offset (mm)", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lbl_x_mag.Wrap( -1 )
-        bSizer2.Add( self.lbl_x_mag, 0, wx.ALL, 5 )
-
-        self.val_x_mag = wx.TextCtrl( self, wx.ID_ANY, u"0.0", wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer2.Add( self.val_x_mag, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer2, 1, wx.EXPAND, 5 )
-
-        bSizer3 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.lbl_y_angle = wx.StaticText( self, wx.ID_ANY, u"y offset (mm)", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.lbl_y_angle.Wrap( -1 )
-        bSizer3.Add( self.lbl_y_angle, 0, wx.ALL, 5 )
-
-        self.val_y_angle = wx.TextCtrl( self, wx.ID_ANY, u"0.0", wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer3.Add( self.val_y_angle, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer3, 1, wx.EXPAND, 5 )
-
-        bSizer8 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.chkbox_tracks = wx.CheckBox( self, wx.ID_ANY, u"Replicate tracks", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.chkbox_tracks.SetValue(True)
-        bSizer8.Add( self.chkbox_tracks, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer8, 1, wx.EXPAND, 5 )
-
-        bSizer5 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.chkbox_zones = wx.CheckBox( self, wx.ID_ANY, u"Replicate zones", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.chkbox_zones.SetValue(True)
-        bSizer5.Add( self.chkbox_zones, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer5, 1, wx.EXPAND, 5 )
-
-        bSizer10 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.chkbox_intersecting = wx.CheckBox( self, wx.ID_ANY, u"Replicate intersecting tracks/zones", wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer10.Add( self.chkbox_intersecting, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer10, 1, wx.EXPAND, 5 )
-
-        bSizer11 = wx.BoxSizer( wx.VERTICAL )
-
-        self.chkbox_remove = wx.CheckBox( self, wx.ID_ANY, u"Remove existing tracks/zones", wx.DefaultPosition, wx.DefaultSize, 0 )
-
-        bSizer11.Add( self.chkbox_remove, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer11, 1, wx.EXPAND, 5 )
-
-        bSizer12 = wx.BoxSizer( wx.HORIZONTAL )
-
-        self.btn_ok = wx.Button( self, wx.ID_OK, u"OK", wx.DefaultPosition, wx.DefaultSize, 0 )
-        self.btn_ok.SetDefault()
-        bSizer12.Add( self.btn_ok, 0, wx.ALL, 5 )
-
-        self.btn_cancel = wx.Button( self, wx.ID_CANCEL, u"Cancel", wx.DefaultPosition, wx.DefaultSize, 0 )
-        bSizer12.Add( self.btn_cancel, 0, wx.ALL, 5 )
-
-        bSizer1.Add( bSizer12, 1, wx.EXPAND, 5 )
-
-        self.SetSizer( bSizer1 )
-        self.Layout()
-
-        self.Centre( wx.BOTH )
+    def __init__(self, parent, replicator, mod_ref):
+        replicate_layout_GUI.ReplicateLayoutGUI.__init__(self, parent)
 
         # Connect Events
-        self.rad_btn_Linear.Bind(wx.EVT_RADIOBUTTON, self.coordinate_system_changed)
-        self.rad_btn_Circular.Bind(wx.EVT_RADIOBUTTON, self.coordinate_system_changed)
+        self.Bind(wx.EVT_LISTBOX, self.level_changed, id=26)
 
-        self.minimum_radius = radius
-        self.minimum_width = width
-        self.minimum_angle = angle
+        self.replicator = replicator
+        self.pivot_mod = self.replicator.get_mod_by_ref(mod_ref)
+        self.levels = self.pivot_mod.filename
 
-        self.val_x_mag.SetValue("%.2f" % self.minimum_width)
-        self.val_y_angle.SetValue(u"0.0")
+        # clear levels
+        self.list_levels.Clear()
+        self.list_levels.AppendItems(self.levels)
 
-    def coordinate_system_changed(self, event):
-        rb = event.GetEventObject() 
-        # if cartesian
-        if rb.GetLabel() == u"Linear":
-            self.rad_btn_Linear.SetValue(True)
-            self.rad_btn_Circular.SetValue(False)
-            self.lbl_x_mag.SetLabelText(u"x offset (mm)")
-            self.lbl_y_angle.SetLabelText(u"y offset (mm)")
-            self.val_x_mag.SetValue("%.2f" % self.minimum_width)
-            self.val_y_angle.SetValue(u"0.0")
-        else:
-            self.rad_btn_Linear.SetValue(False)
-            self.rad_btn_Circular.SetValue(True)
-            self.lbl_x_mag.SetLabelText(u"radius (mm)")
-            self.lbl_y_angle.SetLabelText(u"angle (deg)")
-            self.val_x_mag.SetValue("%.2f" % self.minimum_radius)
-            self.val_y_angle.SetValue("%.2f" % self.minimum_angle)
-        pass
+    def level_changed(self, event):
+        index = self.list_levels.GetSelection()
+
+        list_sheetsChoices = self.replicator.get_sheets_to_replicate(self.pivot_mod, self.pivot_mod.sheet_id[index])
+
+        # get anchor modules
+        anchor_modules = self.replicator.get_list_of_modules_with_same_id(self.pivot_mod.mod_id)
+        # find matching anchors to maching sheets
+        ref_list = []
+        for sheet in list_sheetsChoices:
+            for mod in anchor_modules:
+                if "/".join(sheet) in "/".join(mod.sheet_id):
+                    ref_list.append(mod.ref)
+                    break
+
+        sheets_for_list = [('/').join(x[0]) + " (" + x[1] + ")" for x in zip(list_sheetsChoices, ref_list)]
+        # clear levels
+        self.list_sheets.Clear()
+        self.list_sheets.AppendItems(sheets_for_list)
+
+        # by default select all sheets
+        number_of_items = self.list_sheets.GetCount()
+        for i in range(number_of_items):
+            self.list_sheets.Select(i)
+
+        event.Skip()
 
 
 class ReplicateLayout(pcbnew.ActionPlugin):
@@ -150,101 +93,167 @@ class ReplicateLayout(pcbnew.ActionPlugin):
     A script to replicate layout
     How to use:
     - move to GAL
-    - select module of layout to replicate
+    - select footprint of layout to replicate
     - call the plugin
-    - enter pivot step and confirm pivod module
     """
 
     def defaults(self):
         self.name = "Replicate layout"
         self.category = "Modify Drawing PCB"
         self.description = "Replicate layout of a hierchical sheet"
+        self.icon_file_name = os.path.join(
+                os.path.dirname(__file__), 'duplicate-replicate_layout.svg.png')
 
     def Run(self):
-        _pcbnew_frame = \
-            filter(lambda w: w.GetTitle().startswith('Pcbnew'),
-                   wx.GetTopLevelWindows()
-                   )[0]
+        # load board
+        board = pcbnew.GetBoard()
+
+        # go to the project folder - so that log will be in proper place
+        os.chdir(os.path.dirname(os.path.abspath(board.GetFileName())))
+
+        # set up logger
+        logging.basicConfig(level=logging.DEBUG,
+                            filename="replicate_layout.log",
+                            filemode='w',
+                            format='%(asctime)s %(name)s %(lineno)d:%(message)s',
+                            datefmt='%m-%d %H:%M:%S')
+        logger = logging.getLogger(__name__)
+        logger.info("Replicate layout plugin version: " + VERSION + " started")
+
+        stdout_logger = logging.getLogger('STDOUT')
+        sl_out = StreamToLogger(stdout_logger, logging.INFO)
+        sys.stdout = sl_out
+
+        stderr_logger = logging.getLogger('STDERR')
+        sl_err = StreamToLogger(stderr_logger, logging.ERROR)
+        sys.stderr = sl_err
+
+        _pcbnew_frame = [x for x in wx.GetTopLevelWindows() if x.GetTitle().lower().startswith('pcbnew')][0]
 
         # check if there is exactly one module selected
-        selected_modules = filter(lambda x: x.IsSelected(), pcbnew.GetBoard().GetModules())
+        selected_modules = [x for x in pcbnew.GetBoard().GetModules() if x.IsSelected()]
         selected_names = []
         for mod in selected_modules:
             selected_names.append("{}".format(mod.GetReference()))
 
-        # if exactly one module is selected
-        if len(selected_names) == 1:
-            process_canceled = False
-            # this is a pivot module
-            pivot_module_reference = selected_names[0]
-
-            # prepare the replicator
-            replicator = replicatelayout.Replicator(pcbnew.GetBoard(), pivot_module_reference)
-            # get minimum radius and width
-            min_radius = replicator.minimum_radius
-            min_width = replicator.minimum_width
-            min_angle = replicator.minimum_angle
-
-            # show dialog
-            x_offset = None
-            y_offset = None
-            dlg = ReplicateLayoutDialog(_pcbnew_frame, min_radius, min_width, min_angle)
-            res = dlg.ShowModal()
-
-            replicate_containing_only = False
-            remove_existing_nets_zones = False
-            rep_tracks = False
-            rep_zones = False
-
-            if res == wx.ID_OK:
-                process_canceled = False
-                try:
-                    x_offset = float(dlg.val_x_mag.GetValue())
-                except:
-                    x_offset = None
-                try:
-                    y_offset = float(dlg.val_y_angle.GetValue())
-                except:
-                    y_offset = None
-                replicate_containing_only = not dlg.chkbox_intersecting.GetValue()
-                remove_existing_nets_zones = dlg.chkbox_remove.GetValue()
-                rep_tracks = dlg.chkbox_tracks.GetValue()
-                rep_zones = dlg.chkbox_zones.GetValue()
-            else:
-                process_canceled = True
-
-            if not process_canceled:
-                # execute replicate_layout
-                if (x_offset is not None) and (y_offset is not None):
-                    # are we replicating in polar coordinate system
-                    polar = False
-                    if dlg.rad_btn_Circular.GetValue():
-                        polar = True
-
-                    # replicate now
-                    replicator.replicate_layout(x_offset, y_offset,
-                                                replicate_containing_only,
-                                                remove_existing_nets_zones,
-                                                rep_tracks,
-                                                rep_zones,
-                                                polar)
-
-                    pcbnew.Refresh()
-                else:
-                    caption = 'Replicate Layout'
-                    message = "error parsing x offset and/or y offset input values"
-                    dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_INFORMATION)
-                    dlg.ShowModal()
-                    dlg.Destroy()
-
         # if more or less than one show only a messagebox
-        else:
+        if len(selected_names) != 1:
             caption = 'Replicate Layout'
-            message = "More or less than 1 module selected. Please select exactly one module and run the script again"
+            message = "More or less than 1 footprints selected. Please select exactly one footprint and run the script again"
             dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_INFORMATION)
             dlg.ShowModal()
             dlg.Destroy()
+            return
+        # if exactly one module is selected
+        # this is a pivot module
+        pivot_module_reference = selected_names[0]
 
+        # prepare the replicator
+        logger.info("Preparing replicator with " + pivot_module_reference + " as a reference")
+
+        try:
+            replicator = replicatelayout.Replicator(board)
+        except LookupError as exception:
+            caption = 'Replicate Layout'
+            message = str(exception)
+            dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        except Exception:
+            logger.exception("Fatal error when making an instance of replicator")
+            caption = 'Replicate Layout'
+            message = "Fatal error when making an instance of replicator.\n"\
+                    + "You can raise an issue on GiHub page.\n" \
+                    + "Please attach the replicate_layout.log which you should find in the project folder."
+            dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+        pivot_mod = replicator.get_mod_by_ref(pivot_module_reference)
+
+        logger.info("Pivot footprint is %s\nLocated on:%s\nWith filenames:%s\nWith sheet_id:%s" \
+                    % (repr(pivot_mod.ref), repr(pivot_mod.sheet_id), repr(pivot_mod.filename), repr(pivot_mod.sheet_id)))
+
+        list_of_modules_with_same_id = replicator.get_list_of_modules_with_same_id(pivot_mod.mod_id)
+        nice_list = [(x.ref, x.sheet_id) for x in list_of_modules_with_same_id]
+        logger.info("Corresponding footprints are \n%s" % repr(nice_list))
+
+        list_of_modules = replicator.get_list_of_modules_with_same_id(pivot_mod.mod_id)
+        if not list_of_modules:
+            caption = 'Replicate Layout'
+            message = "Selected footprint is uniqe in the pcb (only one footprint with this ID)"
+            dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+        # show dialog
+        logger.info("Showing dialog")
+        dlg = ReplicateLayoutDialog(_pcbnew_frame, replicator, pivot_module_reference)
+        res = dlg.ShowModal()
+
+        if res == wx.ID_OK:
+
+            selected_items = dlg.list_sheets.GetSelections()
+            slected_names = []
+            for sel in selected_items:
+                slected_names.append(dlg.list_sheets.GetString(sel))
+
+            replicate_containing_only = not dlg.chkbox_intersecting.GetValue()
+            remove_existing_nets_zones = dlg.chkbox_remove.GetValue()
+            rep_tracks = dlg.chkbox_tracks.GetValue()
+            rep_zones = dlg.chkbox_zones.GetValue()
+            rep_text = dlg.chkbox_text.GetValue()
+            rep_drawings = dlg.chkbox_drawings.GetValue()
+        else:
+            logger.info("User canceled the dialog")
+            return
+
+        # failsafe somtimes on my machine wx does not generate a listbox event
+        level = dlg.list_levels.GetSelection()
+        selection_indeces = dlg.list_sheets.GetSelections()
+        sheets_on_a_level = replicator.get_sheets_to_replicate(pivot_mod, pivot_mod.sheet_id[level])
+        sheets_for_replication = [sheets_on_a_level[i] for i in selection_indeces]
+
+        # replicate now
+        logger.info("Replicating layout")
+
+        try:
+            replicator.replicate_layout(pivot_mod, pivot_mod.sheet_id[0:level+1], sheets_for_replication,
+                                        containing=replicate_containing_only,
+                                        remove=remove_existing_nets_zones,
+                                        tracks=rep_tracks,
+                                        zones=rep_zones,
+                                        text=rep_text,
+                                        drawings=rep_drawings)
+            logger.info("Replication complete")
+            pcbnew.Refresh()
+        except Exception:
+            logger.exception("Fatal error when making an instance of replicator")
+            caption = 'Replicate Layout'
+            message = "Fatal error when making an instance of replicator.\n"\
+                    + "You can raise an issue on GiHub page.\n" \
+                    + "Please attach the replicate_layout.log which you should find in the project folder."
+            dlg = wx.MessageDialog(_pcbnew_frame, message, caption, wx.OK | wx.ICON_ERROR)
+            dlg.ShowModal()
+            dlg.Destroy()
+            return
+
+
+class StreamToLogger(object):
+    """
+    Fake file-like stream object that redirects writes to a logger instance.
+    """
+    def __init__(self, logger, log_level=logging.INFO):
+        self.logger = logger
+        self.log_level = log_level
+        self.linebuf = ''
+
+    def write(self, buf):
+        for line in buf.rstrip().splitlines():
+            self.logger.log(self.log_level, line.rstrip())
+
+    def flush(self, *args, **kwargs):
+        """No-op for wrapper"""
         pass
-
-
